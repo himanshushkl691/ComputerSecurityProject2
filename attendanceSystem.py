@@ -7,7 +7,8 @@ from checkFingerCode import *
 from paillierEncryption import *
 
 client = MongoClient("mongodb://localhost:27017/")
-mydb = client.AttendanceSystem
+serverdb = client.AttendanceSystemServer
+clientdb = client.AttendanceSystemClient
 
 cryptSystem = customPaillier()
 
@@ -20,7 +21,7 @@ while True:
     if optionPicked == 1:
         rollNumber = int(input("Enter the Roll Number: "))
         query = {'registeredRollNumber': str(rollNumber)}
-        queryResult = mydb.registeredStudent.count_documents(query)
+        queryResult = clientdb.registeredStudent.count_documents(query)
         if(queryResult == 1):
             print('Already registered\n')
         else:
@@ -28,10 +29,10 @@ while True:
             fingercode = [int(x) for x in input().split()]
             data1 = str(cryptSystem.encryptList([rollNumber])[0])
             query = {'Data1': data1, 'Data2': fingercode}
-            resultQuery = mydb.fingercode.insert_one(query)
+            resultQuery = serverdb.fingercode.insert_one(query)
             if resultQuery.inserted_id:
                 query = {'registeredRollNumber': str(rollNumber)}
-                mydb.registeredStudent.insert_one(query)
+                clientdb.registeredStudent.insert_one(query)
                 print('Successfully registered\n')
             else:
                 print('Try again\n')
@@ -40,9 +41,10 @@ while True:
         print('Enter your fingercode: ', end='')
         fingercode = [int(x) for x in input().split()]
         timestamp = datetime.now()
-        queryResult = isPresent(rollNumber, fingercode, mydb, cryptSystem)
+        queryResult = isPresent(rollNumber, fingercode, serverdb, cryptSystem)
         if(queryResult == True):
-            markingResult = markAttendance(str(rollNumber), timestamp, mydb)
+            markingResult = markAttendance(
+                str(rollNumber), timestamp, clientdb)
             if(markingResult == True):
                 print("Successfully marked\n")
             else:
